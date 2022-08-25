@@ -1,0 +1,34 @@
+# Perform continuous integration tests on updates and pull requests
+name: Build test
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            klippy:
+              - 'klippy/**'
+              - 'test/**'
+              - 'scripts/**'
+            klipper:
+              - 'src/**'
+              - 'lib/**'
+              - 'test/**'
+
+      - name: Test Klippy Only
+        if: steps.changes.outputs.klippy == 'true' && steps.changes.outputs.klipper == 'false'
+        run: docker run -v $PWD:/klipper ${{ secrets.DOCKERHUB_USERNAME }}/klipper-build:latest "./scripts/ci-build.sh" 2>&1
+
+      - name: Test Klipper Full
+        if: steps.changes.outputs.klippy == 'true' && steps.changes.outputs.klipper == 'true'
+        run: docker run -v $PWD:/klipper ${{ secrets.DOCKERHUB_USERNAME }}/klipper-build:latest "./scripts/ci-build.sh" compile 2>&1

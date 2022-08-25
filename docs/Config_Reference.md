@@ -1205,45 +1205,6 @@ the nature of skew correction these lengths are set via gcode. See
 [skew_correction]
 ```
 
-### [z_thermal_adjust]
-
-Temperature-dependant toolhead Z position adjustment. Compensate for vertical
-toolhead movement caused by thermal expansion of the printer's frame in
-real-time using a temperature sensor (typically coupled to a vertical section
-of frame).
-
-See also: [extended g-code commands](G-Codes.md#z_thermal_adjust).
-
-```
-[z_thermal_adjust]
-#temp_coeff:
-#   The temperature coefficient of expansion, in mm/degC. For example, a
-#   temp_coeff of 0.01 mm/degC will move the Z axis downwards by 0.01 mm for
-#   every degree Celsius that the temperature sensor increases. Defaults to
-#   0.0 mm/degC, which applies no adjustment.
-#smooth_time:
-#   Smoothing window applied to the temperature sensor, in seconds. Can reduce
-#   motor noise from excessive small corrections in response to sensor noise.
-#   The default is 2.0 seconds.
-#z_adjust_off_above:
-#   Disables adjustments above this Z height [mm]. The last computed correction
-#   will remain applied until the toolhead moves below the specified Z height
-#   again. The default is 99999999.0 mm (always on).
-#max_z_adjustment:
-#   Maximum absolute adjustment that can be applied to the Z axis [mm]. The
-#   default is 99999999.0 mm (unlimited).
-#sensor_type:
-#sensor_pin:
-#min_temp:
-#max_temp:
-#   Temperature sensor configuration.
-#   See the "extruder" section for the definition of the above
-#   parameters.
-#gcode_id:
-#   See the "heater_generic" section for the definition of this
-#   parameter.
-```
-
 ## Customized homing
 
 ### [safe_z_home]
@@ -1640,14 +1601,13 @@ cs_pin:
 
 ### [mpu9250]
 
-Support for MPU-9250, MPU-9255, MPU-9255, MPU-6050, and MPU-6500
-accelerometers (one may define any number of sections with an
-"mpu9250" prefix).
+Support for mpu9250 and mpu6050 accelerometers (one may define any
+number of sections with an "mpu9250" prefix).
 
 ```
 [mpu9250 my_accelerometer]
 #i2c_address:
-#   Default is 104 (0x68). If AD0 is high, it would be 0x69 instead.
+#   Default is 104 (0x68).
 #i2c_mcu:
 #i2c_bus:
 #i2c_speed: 400000
