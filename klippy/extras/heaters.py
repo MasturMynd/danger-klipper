@@ -388,14 +388,14 @@ class PrinterHeaters:
             "gcode:request_restart", self.turn_off_all_heaters
         )
         # Register commands
-        gcode = self.printer.lookup_object("gcode")
-        gcode.register_command(
+        self.gcode = self.printer.lookup_object("gcode")
+        self.gcode.register_command(
             "TURN_OFF_HEATERS",
             self.cmd_TURN_OFF_HEATERS,
             desc=self.cmd_TURN_OFF_HEATERS_help,
         )
-        gcode.register_command("M105", self.cmd_M105, when_not_ready=True)
-        gcode.register_command(
+        self.gcode.register_command("M105", self.cmd_M105, when_not_ready=True)
+        self.gcode.register_command(
             "TEMPERATURE_WAIT",
             self.cmd_TEMPERATURE_WAIT,
             desc=self.cmd_TEMPERATURE_WAIT_help,
@@ -513,7 +513,12 @@ class PrinterHeaters:
         gcode = self.printer.lookup_object("gcode")
         reactor = self.printer.get_reactor()
         eventtime = reactor.monotonic()
-        while not self.printer.is_shutdown() and heater.check_busy(eventtime):
+        initial_interrupt_counter = gcode.check_interrupt_counter()
+        while (
+            not self.printer.is_shutdown()
+            and heater.check_busy(eventtime)
+            and initial_interrupt_counter == gcode.check_interrupt_counter()
+        ):
             print_time = toolhead.get_last_move_time()
             gcode.respond_raw(self._get_temp(eventtime))
             eventtime = reactor.pause(eventtime + 1.0)
@@ -546,7 +551,12 @@ class PrinterHeaters:
         toolhead = self.printer.lookup_object("toolhead")
         reactor = self.printer.get_reactor()
         eventtime = reactor.monotonic()
-        while not self.printer.is_shutdown():
+        initial_interrupt_counter = self.gcode.check_interrupt_counter()
+        while (
+            not self.printer.is_shutdown()
+            and initial_interrupt_counter
+            == self.gcode.check_interrupt_counter()
+        ):
             temp, target = sensor.get_temp(eventtime)
             if temp >= min_temp and temp <= max_temp:
                 return
