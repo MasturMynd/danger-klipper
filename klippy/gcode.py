@@ -165,7 +165,7 @@ class GCodeDispatch:
             "ECHO",
             "STATUS",
             "HELP",
-            "INTERRUPT",
+            "INTERRUPT_HEATER",
         ]
         for cmd in handlers:
             func = getattr(self, "cmd_" + cmd)
