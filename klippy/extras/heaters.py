@@ -511,10 +511,8 @@ class PrinterHeaters:
         if self.printer.get_start_args().get("debugoutput") is not None:
             return
 
-        gcode = self.printer.lookup_object("gcode")
-
         def check(eventtime):
-            gcode.respond_raw(self._get_temp(eventtime))
+            self.gcode.respond_raw(self._get_temp(eventtime))
             return heater.check_busy(eventtime)
 
         self.printer.wait_while(check)
