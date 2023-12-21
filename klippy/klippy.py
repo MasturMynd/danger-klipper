@@ -382,13 +382,11 @@ class Printer:
         waits until callback returns False
             (or is interrupted, or printer shuts down)
         """
-        counter = self.gcode.get_interrupt_counter()
+        gcode = self.lookup_object("gcode")
+        counter = gcode.get_interrupt_counter()
         eventtime = self.reactor.monotonic()
         while condition_cb(eventtime):
-            if (
-                self.is_shutdown()
-                or counter != self.gcode.get_interrupt_counter()
-            ):
+            if self.is_shutdown() or counter != gcode.get_interrupt_counter():
                 return
             eventtime = self.reactor.pause(eventtime + 1.0)
 
