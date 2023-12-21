@@ -165,7 +165,7 @@ class GCodeDispatch:
             "ECHO",
             "STATUS",
             "HELP",
-            "INTERRUPT_HEATER",
+            "INTERRUPT",
         ]
         for cmd in handlers:
             func = getattr(self, "cmd_" + cmd)
@@ -486,7 +486,7 @@ class GCodeDispatch:
                 cmdhelp.append("%-10s: %s" % (cmd, self.gcode_help[cmd]))
         gcmd.respond_info("\n".join(cmdhelp), log=False)
 
-    def cmd_INTERRUPT_HEATER(self, gcmd):
+    def cmd_INTERRUPT(self, gcmd):
         self.increment_interrupt_counter()
 
 
