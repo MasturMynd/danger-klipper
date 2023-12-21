@@ -172,7 +172,7 @@ class GCodeDispatch:
             desc = getattr(self, "cmd_" + cmd + "_help", None)
             self.register_command(cmd, func, True, desc)
 
-    def check_interrupt_counter(self):
+    def get_interrupt_counter(self):
         return self._interrupt_counter
 
     def increment_interrupt_counter(self):

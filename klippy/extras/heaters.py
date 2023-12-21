@@ -507,21 +507,17 @@ class PrinterHeaters:
 
     def _wait_for_temperature(self, heater):
         # Helper to wait on heater.check_busy() and report M105 temperatures
+
         if self.printer.get_start_args().get("debugoutput") is not None:
             return
-        toolhead = self.printer.lookup_object("toolhead")
+
         gcode = self.printer.lookup_object("gcode")
-        reactor = self.printer.get_reactor()
-        eventtime = reactor.monotonic()
-        initial_interrupt_counter = gcode.check_interrupt_counter()
-        while (
-            not self.printer.is_shutdown()
-            and heater.check_busy(eventtime)
-            and initial_interrupt_counter == gcode.check_interrupt_counter()
-        ):
-            print_time = toolhead.get_last_move_time()
+
+        def check(eventtime):
             gcode.respond_raw(self._get_temp(eventtime))
-            eventtime = reactor.pause(eventtime + 1.0)
+            return heater.check_busy(eventtime)
+
+        self.printer.wait_while(check)
 
     def set_temperature(self, heater, temp, wait=False):
         toolhead = self.printer.lookup_object("toolhead")
@@ -548,21 +544,15 @@ class PrinterHeaters:
             sensor = self.heaters[sensor_name]
         else:
             sensor = self.printer.lookup_object(sensor_name)
-        toolhead = self.printer.lookup_object("toolhead")
-        reactor = self.printer.get_reactor()
-        eventtime = reactor.monotonic()
-        initial_interrupt_counter = self.gcode.check_interrupt_counter()
-        while (
-            not self.printer.is_shutdown()
-            and initial_interrupt_counter
-            == self.gcode.check_interrupt_counter()
-        ):
-            temp, target = sensor.get_temp(eventtime)
+
+        def check(eventtime):
+            temp, _ = sensor.get_temp(eventtime)
             if temp >= min_temp and temp <= max_temp:
-                return
-            print_time = toolhead.get_last_move_time()
+                return False
             gcmd.respond_raw(self._get_temp(eventtime))
-            eventtime = reactor.pause(eventtime + 1.0)
+            return True
+
+        self.printer.wait_while(check)
 
 
 def load_config(config):

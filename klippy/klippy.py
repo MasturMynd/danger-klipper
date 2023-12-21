@@ -376,6 +376,22 @@ class Printer:
             self.run_result = result
         self.reactor.end()
 
+    def wait_while(self, condition_cb):
+        """
+        receives a callback
+        waits until callback returns False
+            (or is interrupted, or printer shuts down)
+        """
+        counter = self.gcode.get_interrupt_counter()
+        eventtime = self.reactor.monotonic()
+        while condition_cb(eventtime):
+            if (
+                self.is_shutdown()
+                or counter != self.gcode.get_interrupt_counter()
+            ):
+                return
+            eventtime = self.reactor.pause(eventtime + 1.0)
+
 
 ######################################################################
 # Startup
