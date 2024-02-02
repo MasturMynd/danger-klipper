@@ -63,7 +63,7 @@ class MCU_SPI:
                 "spi_set_bus oid=%d spi_bus=%%s mode=%d rate=%d"
                 % (self.oid, mode, speed)
             )
-        self.cmd_queue = mcu.alloc_command_queue()
+
         mcu.register_config_callback(self.build_config)
         self.spi_send_cmd = self.spi_transfer_cmd = None
 
@@ -84,6 +84,7 @@ class MCU_SPI:
         return self.cmd_queue
 
     def build_config(self):
+        self.cmd_queue = self.mcu.alloc_command_queue()
         if self.pin is None:
             self.mcu.add_config_cmd(
                 "config_spi_without_cs oid=%d" % (self.oid,)
