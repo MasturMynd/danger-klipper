@@ -915,7 +915,7 @@ class MCU:
         self._reactor.update_timer(
             self.non_critical_recon_timer, self._reactor.NOW
         )
-        logging.info("mcu: %s disconnected", self._name)
+        logging.info("mcu: '%s' disconnected", self._name)
 
     def non_critical_recon_event(self, eventtime):
         self.recon_mcu()
@@ -925,6 +925,14 @@ class MCU:
         # Build config commands
         for cb in self._config_callbacks:
             cb()
+        # oid count is 0, but we have config cmds.
+        # figure out the oid count from the config cmds
+        if self._oid_count == 0 and len(self._config_cmds) != 0:
+            unique_oids = set()
+            for cmd in self._config_cmds:
+                oid = cmd.split(" oid=")[1][0]
+                unique_oids.add(oid)
+            self._oid_count = len(unique_oids)
         self._config_cmds.insert(
             0, "allocate_oids count=%d" % (self._oid_count,)
         )
@@ -1017,7 +1025,7 @@ class MCU:
         )
         self._reactor.unregister_timer(self.non_critical_recon_timer)
         self.last_noncrit_recon_eventtime = None
-        logging.info("mcu: %s reconnected", self._name)
+        logging.info("mcu: '%s' reconnected", self._name)
 
     def reset_to_initial_state(self):
         self._oid_count = 0
@@ -1040,6 +1048,7 @@ class MCU:
             if self._restart_method == "rpi_usb":
                 # Only configure mcu after usb power reset
                 self._check_restart("full reset before config")
+            logging.info("not configured, sending config...")
             # Not configured - send config and issue get_config again
             self._send_config(None)
             config_params = self._send_get_config()
