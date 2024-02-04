@@ -823,7 +823,7 @@ class MCU:
         self.reconnect_interval = (
             config.getfloat("reconnect_interval", 2.0) + 0.12
         )  # add small change to not collide with other events
-
+        self.gcode = printer.lookup_object("gcode")
         # Register handlers
         printer.register_event_handler(
             "klippy:firmware_restart", self._firmware_restart
@@ -917,15 +917,16 @@ class MCU:
             self.non_critical_recon_timer,
             self._reactor.NOW + self.reconnect_interval,
         )
-        logging.info("mcu: '%s' disconnected", self._name)
+        self.gcode.respond_info(f"mcu: '{self._name}' disconnected!", log=True)
 
     def non_critical_recon_event(self, eventtime):
         success = self.recon_mcu()
         if success:
-            logging.info(f"mcu: '{self._name}' reconnected!")
+            self.gcode.respond_info(
+                f"mcu: '{self._name}' reconnected!", log=True
+            )
             return self._reactor.NEVER
         else:
-            logging.info(f"mcu: '{self._name}' not connected!")
             return eventtime + self.reconnect_interval
 
     def _send_config(self, prev_crc):
@@ -1028,10 +1029,6 @@ class MCU:
         self.reset_to_initial_state()
         self.non_critical_disconnected = False
         self._connect()
-        # self._reactor.update_timer(
-        #     self.non_critical_recon_timer, self._reactor.NEVER
-        # )
-        # self._reactor.unregister_timer(self.non_critical_recon_timer)
         return True
 
     def reset_to_initial_state(self):
@@ -1045,10 +1042,6 @@ class MCU:
 
     def _connect(self):
         if self.non_critical_disconnected:
-            # self.non_critical_recon_timer = self._reactor.register_timer(
-            #     self.non_critical_recon_event,
-            #     self._reactor.NOW + self.reconnect_interval,
-            # )
             self._reactor.update_timer(
                 self.non_critical_recon_timer,
                 self._reactor.NOW + self.reconnect_interval,
