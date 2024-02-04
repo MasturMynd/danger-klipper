@@ -758,7 +758,9 @@ class MCU:
             self._name = self._name[4:]
         # Serial port
         wp = "mcu '%s': " % (self._name)
-        self._serial = serialhdl.SerialReader(self._reactor, warn_prefix=wp)
+        self._serial = serialhdl.SerialReader(
+            self._reactor, warn_prefix=wp, mcu=self
+        )
         self._baud = 0
         self._canbus_iface = None
         canbus_uuid = config.get("canbus_uuid", None)
@@ -817,8 +819,7 @@ class MCU:
             self.non_critical_recon_event
         )
         self.is_non_critical = config.getboolean("is_non_critical", False)
-        self._non_critical_disconnected = False
-        # self.last_noncrit_recon_eventtime = None
+        self.non_critical_disconnected = False
         self.reconnect_interval = (
             config.getfloat("reconnect_interval", 2.0) + 0.12
         )  # add small change to not collide with other events
@@ -909,17 +910,23 @@ class MCU:
             self.estimated_print_time = dummy_estimated_print_time
 
     def handle_non_critical_disconnect(self):
-        self._non_critical_disconnected = True
+        self.non_critical_disconnected = True
         self._clocksync.disconnect()
         self._disconnect()
         self._reactor.update_timer(
-            self.non_critical_recon_timer, self._reactor.NOW
+            self.non_critical_recon_timer,
+            self._reactor.NOW + self.reconnect_interval,
         )
         logging.info("mcu: '%s' disconnected", self._name)
 
     def non_critical_recon_event(self, eventtime):
-        self.recon_mcu()
-        return eventtime + self.reconnect_interval
+        success = self.recon_mcu()
+        if success:
+            logging.info(f"mcu: '{self._name}' reconnected!")
+            return self._reactor.NEVER
+        else:
+            logging.info(f"mcu: '{self._name}' not connected!")
+            return eventtime + self.reconnect_interval
 
     def _send_config(self, prev_crc):
         # Build config commands
@@ -1017,15 +1024,15 @@ class MCU:
     def recon_mcu(self):
         res = self._mcu_identify()
         if not res:
-            return
+            return False
         self.reset_to_initial_state()
+        self.non_critical_disconnected = False
         self._connect()
-        self._reactor.update_timer(
-            self.non_critical_recon_timer, self._reactor.NEVER
-        )
-        self._reactor.unregister_timer(self.non_critical_recon_timer)
-        self.last_noncrit_recon_eventtime = None
-        logging.info("mcu: '%s' reconnected", self._name)
+        # self._reactor.update_timer(
+        #     self.non_critical_recon_timer, self._reactor.NEVER
+        # )
+        # self._reactor.unregister_timer(self.non_critical_recon_timer)
+        return True
 
     def reset_to_initial_state(self):
         self._oid_count = 0
@@ -1037,9 +1044,13 @@ class MCU:
         self._steppersync = None
 
     def _connect(self):
-        if self._non_critical_disconnected:
-            self.non_critical_recon_timer = self._reactor.register_timer(
-                self.non_critical_recon_event,
+        if self.non_critical_disconnected:
+            # self.non_critical_recon_timer = self._reactor.register_timer(
+            #     self.non_critical_recon_event,
+            #     self._reactor.NOW + self.reconnect_interval,
+            # )
+            self._reactor.update_timer(
+                self.non_critical_recon_timer,
                 self._reactor.NOW + self.reconnect_interval,
             )
             return
@@ -1089,10 +1100,10 @@ class MCU:
 
     def _mcu_identify(self):
         if self.is_non_critical and not self._check_serial_exists():
-            self._non_critical_disconnected = True
+            self.non_critical_disconnected = True
             return False
         else:
-            self._non_critical_disconnected = False
+            self.non_critical_disconnected = False
         if self.is_fileoutput():
             self._connect_file()
         else:
@@ -1296,7 +1307,7 @@ class MCU:
     def _firmware_restart(self, force=False):
         if (
             self._is_mcu_bridge and not force
-        ) or self._non_critical_disconnected:
+        ) or self.non_critical_disconnected:
             return
         if self._restart_method == "rpi_usb":
             self._restart_rpi_usb()
