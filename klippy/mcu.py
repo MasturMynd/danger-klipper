@@ -8,6 +8,7 @@ import math
 import os
 import zlib
 import serialhdl, msgproto, pins, chelper, clocksync
+import inspect
 
 
 class error(Exception):
@@ -1172,6 +1173,13 @@ class MCU:
         self._config_callbacks.append(cb)
 
     def add_config_cmd(self, cmd, is_init=False, on_restart=False):
+        if inspect.stack()[2].function == "__init__":
+            calling_class_name = (
+                inspect.stack()[1][0].f_locals["self"].__class__.__name__
+            )
+            raise error(
+                f"add_config_cmd() called from __init__ of {calling_class_name}!"
+            )
         if is_init:
             self._init_cmds.append(cmd)
         elif on_restart:
